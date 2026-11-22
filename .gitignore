@@ -1,0 +1,10 @@
+build/
+out/
+*.dll
+*.so
+*.dylib
+*.o
+*.obj
+*.pdb
+*.ilk
+*.exp
