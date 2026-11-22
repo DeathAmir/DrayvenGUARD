@@ -140,6 +140,7 @@ namespace
             return 0;
         }
         clientProfile.store(profile);
+        Hook::versions.add_version(0x0FDB60, rakhook::version_offsets{0x2aca24, 0x2c, 0x3a8a0, 0x37d90, 0xdb6, 0x390c0, 0x39100});
         if (!Hook::initialize())
         {
             MessageBoxA(nullptr, "DrayvenGUARD could not safely initialize this client network profile.", "DrayvenGUARD", MB_OK | MB_ICONERROR | MB_TOPMOST);
