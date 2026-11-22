@@ -19,6 +19,7 @@ namespace
     constexpr unsigned char MessageReport = 3;
     constexpr unsigned char ProfileR1 = 1;
     constexpr unsigned char ProfileDL = 2;
+    constexpr unsigned char ProfileOpenMP = 3;
     constexpr unsigned char MaxModules = 16;
     constexpr unsigned char MaxName = 63;
     constexpr auto ReportTimeout = std::chrono::seconds(20);
@@ -97,7 +98,7 @@ namespace
             if (message == MessageHello)
             {
                 unsigned char profile = 0;
-                if (!stream.readUINT8(profile) || (profile != ProfileR1 && profile != ProfileDL)) return false;
+                if (!stream.readUINT8(profile) || (profile != ProfileR1 && profile != ProfileDL && profile != ProfileOpenMP)) return false;
                 const ClientVersion version = player.getClientVersion();
                 if (version != ClientVersion::ClientVersion_SAMP_037 && version != ClientVersion::ClientVersion_SAMP_03DL && version != ClientVersion::ClientVersion_openmp)
                 {
@@ -114,6 +115,8 @@ namespace
                     reject(player, "Client version unsupported: expected SA-MP 0.3.7 R1.");
                     return false;
                 }
+                if (version == ClientVersion::ClientVersion_openmp && profile == ProfileOpenMP && player.getClientVersion() != ClientVersion::ClientVersion_openmp)
+                    return false;
                 state.profile = profile;
                 state.nonce = makeNonce();
                 NetworkBitStream response;

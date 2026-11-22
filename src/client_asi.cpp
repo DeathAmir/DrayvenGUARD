@@ -19,6 +19,7 @@ namespace
     constexpr unsigned char MessageReport = 3;
     constexpr unsigned char ProfileR1 = 1;
     constexpr unsigned char ProfileDL = 2;
+    constexpr unsigned char ProfileOpenMP = 3;
     constexpr std::size_t MaxModules = 16;
     constexpr std::size_t MaxName = 63;
     using Hook = rakhook::hooker<rakhook::wrappers::minhook>;
@@ -43,6 +44,11 @@ namespace
         const DWORD entry = nt->OptionalHeader.AddressOfEntryPoint;
         if (entry == 0x31DF13) { profile = ProfileR1; return true; }
         if (entry == 0x0FDB60) { profile = ProfileDL; return true; }
+        if (entry == 0x0CBC90 && GetModuleHandleW(L"omp-client.dll") != nullptr)
+        {
+            profile = ProfileOpenMP;
+            return true;
+        }
         return false;
     }
 
@@ -141,6 +147,7 @@ namespace
         }
         clientProfile.store(profile);
         Hook::versions.add_version(0x0FDB60, rakhook::version_offsets{0x2aca24, 0x2c, 0x3a8a0, 0x37d90, 0xdb6, 0x390c0, 0x39100});
+        Hook::versions.add_version(0x0CBC90, rakhook::version_offsets{0x26EB94, 0x0, 0x3ade0, 0x382d0, 0xdb6, 0x39600, 0x39640});
         if (!Hook::initialize())
         {
             MessageBoxA(nullptr, "DrayvenGUARD could not safely initialize this client network profile.", "DrayvenGUARD", MB_OK | MB_ICONERROR | MB_TOPMOST);

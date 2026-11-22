@@ -95,7 +95,7 @@ The project contains a 32-bit Windows client target named `iRxVoice2Helper.asi` 
 
 The component challenges reports with a server-generated nonce, validates the response and kicks clients reporting another ASI with `Lotfan File Haye Ghir Mojhaz Inject Ya Load Nakonid`. Clients that do not complete a scan within 20 seconds are kicked with a missing-client/unsupported-version message.
 
-The ASI accepts PE entry-point profiles SA-MP 0.3.7 R1 (`0x31DF13`) and SA-MP 0.3.DL R1 (`0x0FDB60`). An open.mp Client is accepted when its embedded `samp.dll` matches one of those two profiles and the server identifies it as open.mp. Other client builds display an unsupported-version message and do not install network hooks. Exact open.mp Client distribution compatibility still requires runtime smoke testing.
+The ASI accepts SA-MP 0.3.7 R1 (`0x31DF13`) and SA-MP 0.3.DL R1 (`0x0FDB60`). It also accepts the open.mp Client R5 profile (`0x0CBC90`) only when the official `omp-client.dll` module is present; that profile uses its matching RakClient offsets. The server verifies that this profile arrives as `ClientVersion_openmp`. Other client builds display an unsupported-version message and do not install network hooks. Runtime smoke testing against each official launcher build is still required.
 
 Build the ASI with a 32-bit Windows toolchain: `cmake -S . -B build-asi -A Win32 -DDG_BUILD_SERVER_PLUGIN=OFF -DDG_BUILD_CLIENT_ASI=ON`, then `cmake --build build-asi --config Release --target iRxVoice2Helper`.
 
