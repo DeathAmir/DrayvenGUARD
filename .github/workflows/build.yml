@@ -33,11 +33,17 @@ jobs:
       - name: Build
         run: cmake --build build --config Release --parallel 2
 
-      - name: Upload plugin
+      - name: Stage release package
+        shell: bash
+        run: |
+          mkdir -p release
+          cp build/bin/drayvenguard.* release/
+          cp include/drayvenguard.inc release/
+
+      - name: Upload plugin and Pawn include
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: |
-            build/bin/drayvenguard.*
+          path: release/*
           if-no-files-found: error
           retention-days: 30
