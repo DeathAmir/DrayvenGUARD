@@ -23,6 +23,7 @@ target_include_directories(drayvenguard PRIVATE
 )
 
 target_compile_features(drayvenguard PRIVATE cxx_std_17)
+target_compile_definitions(drayvenguard PRIVATE HAVE_STDINT_H)
 
 if(WIN32)
     target_compile_definitions(drayvenguard PRIVATE WIN32 _CRT_SECURE_NO_WARNINGS)
