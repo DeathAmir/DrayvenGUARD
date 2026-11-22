@@ -27,6 +27,7 @@ namespace
     {
         std::uint64_t nonce = 0;
         std::chrono::steady_clock::time_point connectedAt{};
+        std::chrono::steady_clock::time_point lastReportAt{};
         bool verified = false;
         bool kicked = false;
         unsigned char profile = 0;
@@ -73,8 +74,14 @@ namespace
             {
                 if (!player) continue;
                 auto& state = states_[static_cast<std::size_t>(player->getID())];
-                if (!state.verified && !state.kicked && state.connectedAt.time_since_epoch().count() != 0 && now - state.connectedAt > ReportTimeout)
+                if (state.kicked)
+                    continue;
+                if (state.connectedAt.time_since_epoch().count() == 0)
+                    continue;
+                if (!state.verified && now - state.connectedAt > ReportTimeout)
                     reject(*player, "Client version unsupported or DrayvenGUARD ASI is missing.");
+                else if (state.verified && state.lastReportAt.time_since_epoch().count() != 0 && now - state.lastReportAt > std::chrono::seconds(15))
+                    reject(*player, "DrayvenGUARD client scan timed out.");
             }
         }
 
@@ -158,6 +165,7 @@ namespace
             }
 
             state.verified = true;
+            state.lastReportAt = std::chrono::steady_clock::now();
             state.nonce = 0;
             core_->printLn("[DrayvenGUARD] Player %d passed ASI scan (profile %u).", player.getID(), state.profile);
             return true;
