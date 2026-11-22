@@ -115,8 +115,6 @@ namespace
                     reject(player, "Client version unsupported: expected SA-MP 0.3.7 R1.");
                     return false;
                 }
-                if (version == ClientVersion::ClientVersion_openmp && profile == ProfileOpenMP && player.getClientVersion() != ClientVersion::ClientVersion_openmp)
-                    return false;
                 state.profile = profile;
                 state.nonce = makeNonce();
                 NetworkBitStream response;
