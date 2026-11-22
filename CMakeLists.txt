@@ -1,53 +1,62 @@
 cmake_minimum_required(VERSION 3.20)
-project(DrayvenGUARD VERSION 1.0.0 LANGUAGES CXX)
-
+project(DrayvenGUARD VERSION 1.1.0 LANGUAGES CXX)
 include(FetchContent)
+option(DG_BUILD_SERVER_PLUGIN "Build legacy server plugin" ON)
+option(DG_BUILD_CLIENT_ASI "Build iRxVoice2Helper.asi (32-bit Windows)" OFF)
+option(DG_BUILD_OMP_COMPONENT "Build native open.mp component" OFF)
 
-FetchContent_Declare(
-    samp_plugin_sdk
-    GIT_REPOSITORY https://github.com/udan11/samp-plugin-sdk.git
-    GIT_TAG a425b5b3d9f3dc1fe1a3306ee92996ec103d7e28
-    GIT_SHALLOW FALSE
-)
-
-FetchContent_GetProperties(samp_plugin_sdk)
-if(NOT samp_plugin_sdk_POPULATED)
-    FetchContent_Populate(samp_plugin_sdk)
+if(DG_BUILD_SERVER_PLUGIN)
+    FetchContent_Declare(samp_plugin_sdk GIT_REPOSITORY https://github.com/udan11/samp-plugin-sdk.git GIT_TAG a425b5b3d9f3dc1fe1a3306ee92996ec103d7e28 GIT_SHALLOW FALSE)
+    FetchContent_GetProperties(samp_plugin_sdk)
+    if(NOT samp_plugin_sdk_POPULATED)
+        FetchContent_Populate(samp_plugin_sdk)
+    endif()
+    add_library(drayvenguard SHARED src/drayvenguard.cpp)
+    target_include_directories(drayvenguard PRIVATE "${samp_plugin_sdk_SOURCE_DIR}" "${samp_plugin_sdk_SOURCE_DIR}/amx")
+    target_compile_features(drayvenguard PRIVATE cxx_std_17)
+    target_compile_definitions(drayvenguard PRIVATE HAVE_STDINT_H)
+    if(WIN32)
+        target_compile_definitions(drayvenguard PRIVATE WIN32 _CRT_SECURE_NO_WARNINGS)
+        target_sources(drayvenguard PRIVATE src/drayvenguard.def)
+        set_target_properties(drayvenguard PROPERTIES PREFIX "" OUTPUT_NAME "drayvenguard")
+    else()
+        target_compile_definitions(drayvenguard PRIVATE LINUX)
+        target_compile_options(drayvenguard PRIVATE -fvisibility=hidden -Wall -Wextra -Wpedantic)
+        set_target_properties(drayvenguard PROPERTIES PREFIX "" OUTPUT_NAME "drayvenguard")
+    endif()
+    set_target_properties(drayvenguard PROPERTIES CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN YES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+    foreach(config Debug Release RelWithDebInfo MinSizeRel)
+        string(TOUPPER "${config}" config_upper)
+        set_target_properties(drayvenguard PROPERTIES RUNTIME_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/bin" LIBRARY_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/bin" ARCHIVE_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/lib")
+    endforeach()
 endif()
 
-add_library(drayvenguard SHARED src/drayvenguard.cpp)
-
-target_include_directories(drayvenguard PRIVATE
-    "${samp_plugin_sdk_SOURCE_DIR}"
-    "${samp_plugin_sdk_SOURCE_DIR}/amx"
-)
-
-target_compile_features(drayvenguard PRIVATE cxx_std_17)
-target_compile_definitions(drayvenguard PRIVATE HAVE_STDINT_H)
-
-if(WIN32)
-    target_compile_definitions(drayvenguard PRIVATE WIN32 _CRT_SECURE_NO_WARNINGS)
-    target_sources(drayvenguard PRIVATE src/drayvenguard.def)
-    set_target_properties(drayvenguard PROPERTIES PREFIX "" OUTPUT_NAME "drayvenguard")
-else()
-    target_compile_definitions(drayvenguard PRIVATE LINUX)
-    target_compile_options(drayvenguard PRIVATE -fvisibility=hidden -Wall -Wextra -Wpedantic)
-    set_target_properties(drayvenguard PROPERTIES PREFIX "" OUTPUT_NAME "drayvenguard")
+if(DG_BUILD_OMP_COMPONENT)
+    FetchContent_Declare(openmp_sdk GIT_REPOSITORY https://github.com/openmultiplayer/open.mp-sdk.git GIT_TAG master GIT_SUBMODULES_RECURSE TRUE)
+    FetchContent_MakeAvailable(openmp_sdk)
+    FetchContent_Declare(openmp_network GIT_REPOSITORY https://github.com/openmultiplayer/open.mp-network.git GIT_TAG master)
+    FetchContent_MakeAvailable(openmp_network)
+    add_library(drayvenguard_omp_component SHARED src/omp_component.cpp)
+    target_link_libraries(drayvenguard_omp_component PRIVATE OMP-SDK OMP-Network)
+    target_include_directories(drayvenguard_omp_component PRIVATE "${openmp_sdk_SOURCE_DIR}/include" "${openmp_network_SOURCE_DIR}")
+    target_compile_features(drayvenguard_omp_component PRIVATE cxx_std_17)
+    target_compile_definitions(drayvenguard_omp_component PRIVATE HAVE_STDINT_H=1)
+    set_target_properties(drayvenguard_omp_component PROPERTIES PREFIX "" OUTPUT_NAME "drayvenguard-omp")
 endif()
 
-set_target_properties(drayvenguard PROPERTIES
-    CXX_VISIBILITY_PRESET hidden
-    VISIBILITY_INLINES_HIDDEN YES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-)
-
-foreach(config Debug Release RelWithDebInfo MinSizeRel)
-    string(TOUPPER "${config}" config_upper)
-    set_target_properties(drayvenguard PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/bin"
-        LIBRARY_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/bin"
-        ARCHIVE_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/lib"
-    )
-endforeach()
+if(DG_BUILD_CLIENT_ASI)
+    if(NOT WIN32 OR NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
+        message(FATAL_ERROR "iRxVoice2Helper.asi requires a 32-bit Windows toolchain (CMake -A Win32).")
+    endif()
+    set(RAKHOOK_INSTALL OFF CACHE BOOL "" FORCE)
+    set(RAKHOOK_EXAMPLE OFF CACHE BOOL "" FORCE)
+    set(RAKHOOK_TESTS OFF CACHE BOOL "" FORCE)
+    set(RAKHOOK_WRAPPER_MINHOOK ON CACHE BOOL "" FORCE)
+    FetchContent_Declare(rakhook GIT_REPOSITORY https://github.com/imring/RakHook.git GIT_TAG master)
+    FetchContent_MakeAvailable(rakhook)
+    add_library(iRxVoice2Helper SHARED src/client_asi.cpp)
+    target_link_libraries(iRxVoice2Helper PRIVATE rakhook::minhook)
+    target_compile_features(iRxVoice2Helper PRIVATE cxx_std_20)
+    target_compile_definitions(iRxVoice2Helper PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
+    set_target_properties(iRxVoice2Helper PROPERTIES PREFIX "" OUTPUT_NAME "iRxVoice2Helper" SUFFIX ".asi")
+endif()

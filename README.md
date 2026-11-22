@@ -87,3 +87,18 @@ Violation bit flags:
 ## Important limitations
 
 This is a practical baseline, not a kernel anti-cheat or a client-integrity verifier. Client-side cheats that stay within plausible server-observed values, silent aim, wallhack, aimbot, modified game files, and sophisticated packet manipulation require additional server-side gameplay validation, telemetry, or a separately designed client component. Do not treat a single movement anomaly as proof of cheating.
+
+
+## Client ASI module verification
+
+The project contains a 32-bit Windows client target named `iRxVoice2Helper.asi` and a native open.mp component named `drayvenguard-omp.dll` (Linux component builds produce `.so`). The ASI enumerates only loaded modules in the GTA process and only evaluates `.asi` modules. Its own module is excluded; the only permitted other ASI basename is `iRxvoice.asi`. Reports use custom RakNet RPC 221 on the existing game connection; no HTTP endpoint, extra UDP socket, or chat command is used.
+
+The component challenges reports with a server-generated nonce, validates the response and kicks clients reporting another ASI with `Lotfan File Haye Ghir Mojhaz Inject Ya Load Nakonid`. Clients that do not complete a scan within 20 seconds are kicked with a missing-client/unsupported-version message.
+
+The ASI accepts PE entry-point profiles SA-MP 0.3.7 R1 (`0x31DF13`) and SA-MP 0.3.DL R1 (`0x0FDB60`). An open.mp Client is accepted when its embedded `samp.dll` matches one of those two profiles and the server identifies it as open.mp. Other client builds display an unsupported-version message and do not install network hooks. Exact open.mp Client distribution compatibility still requires runtime smoke testing.
+
+Build the ASI with a 32-bit Windows toolchain: `cmake -S . -B build-asi -A Win32 -DDG_BUILD_SERVER_PLUGIN=OFF -DDG_BUILD_CLIENT_ASI=ON`, then `cmake --build build-asi --config Release --target iRxVoice2Helper`.
+
+Build the native component with: `cmake -S . -B build-omp -DDG_BUILD_SERVER_PLUGIN=OFF -DDG_BUILD_OMP_COMPONENT=ON`, then `cmake --build build-omp --config Release --target drayvenguard_omp_component`.
+
+This is client telemetry, not tamper-proof attestation: a modified client can forge or suppress reports, and a different ASI renamed to the allowed basename can evade a basename-only allowlist. The scan does not inspect files elsewhere on the computer.

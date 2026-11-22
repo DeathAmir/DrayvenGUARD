@@ -1,18 +1,15 @@
 name: Build DrayvenGUARD
-
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
-  build:
-    name: Build ${{ matrix.os }}
+  build-plugin:
+    name: Build server plugin ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
@@ -22,28 +19,53 @@ jobs:
           - os: windows-latest
             artifact: drayvenguard-windows-x64
     runs-on: ${{ matrix.os }}
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDG_BUILD_SERVER_PLUGIN=ON
       - name: Build
         run: cmake --build build --config Release --parallel 2
-
-      - name: Stage release package
+      - name: Stage release
         shell: bash
         run: |
           mkdir -p release
           cp build/bin/drayvenguard.* release/
           cp include/drayvenguard.inc release/
-
-      - name: Upload plugin and Pawn include
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: release/*
+          if-no-files-found: error
+          retention-days: 30
+  build-asi:
+    name: Build 32-bit client ASI
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure x86
+        run: cmake -S . -B build-asi -A Win32 -DDG_BUILD_SERVER_PLUGIN=OFF -DDG_BUILD_CLIENT_ASI=ON
+      - name: Build ASI
+        run: cmake --build build-asi --config Release --target iRxVoice2Helper --parallel 2
+      - name: Upload ASI
+        uses: actions/upload-artifact@v4
+        with:
+          name: iRxVoice2Helper-windows-x86
+          path: build-asi/Release/iRxVoice2Helper.asi
+          if-no-files-found: error
+          retention-days: 30
+  build-omp-component:
+    name: Build open.mp native component
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build-omp -DDG_BUILD_SERVER_PLUGIN=OFF -DDG_BUILD_OMP_COMPONENT=ON -DCMAKE_BUILD_TYPE=Release
+      - name: Build component
+        run: cmake --build build-omp --config Release --target drayvenguard_omp_component --parallel 2
+      - name: Upload component
+        uses: actions/upload-artifact@v4
+        with:
+          name: drayvenguard-openmp-windows-x64
+          path: build-omp/Release/drayvenguard-omp.dll
           if-no-files-found: error
           retention-days: 30
