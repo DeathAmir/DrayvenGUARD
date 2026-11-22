@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 project(DrayvenGUARD VERSION 1.1.0 LANGUAGES CXX)
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 include(FetchContent)
 option(DG_BUILD_SERVER_PLUGIN "Build legacy server plugin" ON)
 option(DG_BUILD_CLIENT_ASI "Build iRxVoice2Helper.asi (32-bit Windows)" OFF)
