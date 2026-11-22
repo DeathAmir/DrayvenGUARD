@@ -54,18 +54,30 @@ jobs:
           if-no-files-found: error
           retention-days: 30
   build-omp-component:
-    name: Build open.mp native component
+    name: Build open.mp native component (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86
+            cmake_arch: Win32
+            artifact: drayvenguard-openmp-windows-x86
+            output: build-omp/Release/drayvenguard-omp.dll
+          - arch: x64
+            cmake_arch: x64
+            artifact: drayvenguard-openmp-windows-x64
+            output: build-omp/Release/drayvenguard-omp.dll
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - name: Configure
-        run: cmake -S . -B build-omp -DDG_BUILD_SERVER_PLUGIN=OFF -DDG_BUILD_OMP_COMPONENT=ON -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build-omp -A ${{ matrix.cmake_arch }} -DDG_BUILD_SERVER_PLUGIN=OFF -DDG_BUILD_OMP_COMPONENT=ON -DCMAKE_BUILD_TYPE=Release
       - name: Build component
         run: cmake --build build-omp --config Release --target drayvenguard_omp_component --parallel 2
       - name: Upload component
         uses: actions/upload-artifact@v4
         with:
-          name: drayvenguard-openmp-windows-x64
-          path: build-omp/Release/drayvenguard-omp.dll
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.output }}
           if-no-files-found: error
           retention-days: 30
